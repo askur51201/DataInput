@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Saver App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom scrollbar for saved texts */
+        .saved-texts {
+            scrollbar-width: thin;
+            scrollbar-color: #4f46e5 #e0e7ff;
+        }
+        .saved-texts::-webkit-scrollbar {
+            width: 8px;
+        }
+        .saved-texts::-webkit-scrollbar-track {
+            background: #e0e7ff;
+            border-radius: 10px;
+        }
+        .saved-texts::-webkit-scrollbar-thumb {
+            background-color: #4f46e5;
+            border-radius: 10px;
+        }
+        
+        /* Smooth transitions */
+        .text-item {
+            transition: all 0.3s ease;
+        }
+        .text-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <!-- Header -->
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-bold text-indigo-700 mb-2">Aplikasi Penyimpan Teks</h1>
+            <p class="text-gray-600">Simpan, kelola, dan akses teks Anda kapan saja</p>
+        </header>
+        
+        <!-- Text Input Area -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <div class="mb-4">
+                <label for="text-input" class="block text-sm font-medium text-gray-700 mb-2">Masukkan Teks Anda</label>
+                <textarea 
+                    id="text-input" 
+                    rows="5" 
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="Ketik teks Anda di sini..."></textarea>
+            </div>
+            <div class="flex justify-between items-center">
+                <div class="text-sm text-gray-500" id="char-count">0 karakter</div>
+                <button 
+                    id="save-btn" 
+                    class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors">
+                    Simpan
+                </button>
+            </div>
+        </div>
+        
+        <!-- Saved Texts Section -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Teks Tersimpan</h2>
+            
+            <div id="no-texts" class="text-center py-8 text-gray-500">
+                <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/ae7e9120-b5a5-4c9f-b281-6c2025da0515.png" alt="Placeholder for no saved texts" class="mx-auto mb-4 rounded-lg">
+                <p>Belum ada teks yang disimpan</p>
+            </div>
+            
+            <div id="saved-texts" class="saved-texts max-h-96 overflow-y-auto hidden">
+                <!-- Texts will be added here dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const textInput = document.getElementById('text-input');
+            const saveBtn = document.getElementById('save-btn');
+            const savedTextsContainer = document.getElementById('saved-texts');
+            const noTextsMessage = document.getElementById('no-texts');
+            const charCount = document.getElementById('char-count');
+            
+            // Load saved texts on page load
+            loadSavedTexts();
+            
+            // Update character count
+            textInput.addEventListener('input', function() {
+                const count = textInput.value.length;
+                charCount.textContent = `${count} karakter`;
+            });
+            
+            // Save text
+            saveBtn.addEventListener('click', function() {
+                const text = textInput.value.trim();
+                
+                if (text === '') {
+                    alert('Mohon masukkan teks terlebih dahulu');
+                    return;
+                }
+                
+                saveText(text);
+                textInput.value = '';
+                charCount.textContent = '0 karakter';
+                loadSavedTexts();
+            });
+            
+            // Function to save text to localStorage
+            function saveText(text) {
+                let texts = JSON.parse(localStorage.getItem('savedTexts') || '[]');
+                const timestamp = new Date().toLocaleString();
+                
+                texts.unshift({
+                    content: text,
+                    date: timestamp
+                });
+                
+                localStorage.setItem('savedTexts', JSON.stringify(texts));
+            }
+            
+            // Function to load and display saved texts
+            function loadSavedTexts() {
+                const texts = JSON.parse(localStorage.getItem('savedTexts') || '[]');
+                
+                if (texts.length === 0) {
+                    noTextsMessage.classList.remove('hidden');
+                    savedTextsContainer.classList.add('hidden');
+                    return;
+                }
+                
+                noTextsMessage.classList.add('hidden');
+                savedTextsContainer.classList.remove('hidden');
+                savedTextsContainer.innerHTML = '';
+                
+                texts.forEach((textObj, index) => {
+                    const textItem = document.createElement('div');
+                    textItem.className = 'text-item bg-gray-50 p-4 rounded-lg mb-3 border border-gray-200';
+                    textItem.innerHTML = `
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-sm text-gray-500">${textObj.date}</span>
+                            <button class="delete-btn text-red-500 hover:text-red-700 text-sm" data-index="${index}">
+                                Hapus
+                            </button>
+                        </div>
+                        <p class="text-gray-800 whitespace-pre-wrap">${textObj.content}</p>
+                    `;
+                    savedTextsContainer.appendChild(textItem);
+                });
+                
+                // Add event listeners to delete buttons
+                document.querySelectorAll('.delete-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const index = parseInt(this.getAttribute('data-index'));
+                        deleteText(index);
+                    });
+                });
+            }
+            
+            // Function to delete a text
+            function deleteText(index) {
+                let texts = JSON.parse(localStorage.getItem('savedTexts') || '[]');
+                texts.splice(index, 1);
+                localStorage.setItem('savedTexts', JSON.stringify(texts));
+                loadSavedTexts();
+            }
+        });
+    </script>
+</body>
+</html>
+
